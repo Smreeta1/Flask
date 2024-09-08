@@ -13,4 +13,5 @@ share/python-wheels/
 *.egg-info/
 *.py[cod]
 *$py.class
+.env
 

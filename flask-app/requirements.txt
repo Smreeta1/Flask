@@ -6,5 +6,6 @@ itsdangerous==2.2.0
 Jinja2==3.1.4
 MarkupSafe==2.1.5
 redis==5.0.8
+python-dotenv
 
 Werkzeug==3.0.4

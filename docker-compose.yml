@@ -5,6 +5,8 @@ services:
       context: ./hello
       dockerfile: Dockerfile
     command: python hello.py
+    volumes:
+       - ./hello:/app  
 
   flask:
     build:
@@ -13,6 +15,8 @@ services:
     command: python app.py
     ports:
       - "5000:5000"
+    volumes:
+         - ./flask-app:/app  
 
 # hello Service: Builds from ./hello directory, using Dockerfile in /hello and runs hello.py.
 # flask Service: Builds from ./flask-app directory, using Dockerfile in /flask-app and runs app.py, exposing port 5000.

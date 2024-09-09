@@ -15,4 +15,4 @@ share/python-wheels/
 *$py.class
 .env
 *.rdb
-output.txt
+trash/

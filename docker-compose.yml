@@ -26,42 +26,33 @@ services:
     ports:
       - "6379:6379"
 
-  # enqueue:
-  #   build:
-  #     context: ./rq
-  #     dockerfile: Dockerfile
-  #   command: python enqueue.py
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - ./rq:/app
-  #   depends_on:
-  #     - redis
-  #   env_file:
-  #     - ./rq/.env 
-
-  # rq-worker:
-  #   build:
-  #     context: ./rq
-  #     dockerfile: Dockerfile
-  #   command: python worker.py
-  #   depends_on:
-  #     - redis
-  #   volumes:
-  #     - ./rq:/app
-  #   env_file:
-  #     - ./rq/.env 
-
-  enqueue-worker:
+#enqueue container:enqueues tasks into Redis that will be proecessed by worker
+  enqueue:
     build:
       context: ./rq
       dockerfile: Dockerfile
+    command: python enqueue.py
     ports:
-      - "8000:8000" 
+      - "8000:8000"
     volumes:
       - ./rq:/app
     depends_on:
       - redis
     env_file:
-      - ./rq/.env
+      - ./rq/.env 
+
+# rq-worker container: processes tasks from Redis queues :listens for tasks and executes them.    
+  rq-worker:
+    build:
+      context: ./rq
+      dockerfile: Dockerfile
+    command: python worker.py
+    depends_on:
+      - redis
+    volumes:
+      - ./rq:/app
+    env_file:
+      - ./rq/.env 
+
+
 

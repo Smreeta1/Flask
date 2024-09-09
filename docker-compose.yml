@@ -26,5 +26,42 @@ services:
     ports:
       - "6379:6379"
 
-# hello Service: Builds from ./hello directory, using Dockerfile in /hello and runs hello.py.
-# flask Service: Builds from ./flask-app directory, using Dockerfile in /flask-app and runs app.py, exposing port 5000.
+  # enqueue:
+  #   build:
+  #     context: ./rq
+  #     dockerfile: Dockerfile
+  #   command: python enqueue.py
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - ./rq:/app
+  #   depends_on:
+  #     - redis
+  #   env_file:
+  #     - ./rq/.env 
+
+  # rq-worker:
+  #   build:
+  #     context: ./rq
+  #     dockerfile: Dockerfile
+  #   command: python worker.py
+  #   depends_on:
+  #     - redis
+  #   volumes:
+  #     - ./rq:/app
+  #   env_file:
+  #     - ./rq/.env 
+
+  enqueue-worker:
+    build:
+      context: ./rq
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" 
+    volumes:
+      - ./rq:/app
+    depends_on:
+      - redis
+    env_file:
+      - ./rq/.env
+

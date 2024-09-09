@@ -14,4 +14,5 @@ share/python-wheels/
 *.py[cod]
 *$py.class
 .env
-
+*.rdb
+output.txt

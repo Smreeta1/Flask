@@ -13,7 +13,9 @@ def scrape_url(url):
         # Extract title and text content
         title = soup.title.text if soup.title else "No Title Found"
         paragraphs = [p.get_text() for p in soup.find_all('p')]  
-
+        print(paragraphs)
+        print(title)
         return paragraphs, title
+        
     except requests.exceptions.RequestException as e:
         return ["An error occurred: " + str(e)], "Error"

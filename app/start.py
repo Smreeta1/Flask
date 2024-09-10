@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Connect to Redis
 redis_conn = Redis(host='127.0.0.1', port=6379)
-q = Queue('scraper-tasks', connection=redis_conn)
+q = Queue('default', connection=redis_conn)
 
 @app.route('/')
 def index():
@@ -29,6 +29,7 @@ def get_result(job_id):
     if job:
         if job.is_finished:
             paragraphs, title = job.result
+            print(f"Job Result: title={title}, paragraphs={paragraphs}")  # Debug print
         elif job.is_failed:
             paragraphs = ["An error occurred while processing the job."]
             title = "Error"
@@ -39,6 +40,7 @@ def get_result(job_id):
         paragraphs = ["Job not found."]
         title = "Error"
     return render_template('scrape-results.html', paragraphs=paragraphs, title=title)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

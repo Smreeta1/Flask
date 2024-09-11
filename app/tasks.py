@@ -6,6 +6,7 @@ def scrape_url(url):
     try:
         # Fetch the content from the URL
         response = requests.get(url)
+        time.sleep(3)
         response.raise_for_status() 
         
         # Parse the page content

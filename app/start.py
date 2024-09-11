@@ -5,8 +5,9 @@ from tasks import scrape_url
 
 app = Flask(__name__)
 
-# Connect to Redis
-redis_conn = Redis(host='127.0.0.1', port=6379)
+# redis_conn = Redis(host='127.0.0.1', port=6379) # to connect outside docker
+
+redis_conn = Redis(host='redis', port=6379)
 q = Queue('default', connection=redis_conn)
 
 @app.route('/')
@@ -30,17 +31,13 @@ def get_result(job_id):
         if job.is_finished:
             paragraphs, title = job.result
             print(f"Job Result: title={title}, paragraphs={paragraphs}")  # Debug print
+            return render_template('scrape-results.html', paragraphs=paragraphs, title=title)
         elif job.is_failed:
-            paragraphs = ["An error occurred while processing the job."]
-            title = "Error"
+            return render_template('scrape-results.html', paragraphs=["An error occurred while processing the job."], title="Error")
         else:
-            paragraphs = ["Processing..."]
-            title = "Processing..."
+            return render_template('scrape-results.html', paragraphs=["Processing..."], title="Processing...")
     else:
-        paragraphs = ["Job not found."]
-        title = "Error"
-    return render_template('scrape-results.html', paragraphs=paragraphs, title=title)
-
+        return render_template('scrape-results.html', paragraphs=["Job not found."], title="Error")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=8008)

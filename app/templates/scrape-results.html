@@ -3,14 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scrape Results</title>
+    <title>{{ title }}</title>
+    {% if title == "Processing..." %}
+    <meta http-equiv="refresh" content="2"> 
+    {% comment %} autorefresh to render {% endcomment %}
+    {% endif %}
 </head>
 <body>
     <h1>{{ title }}</h1>
     <div>
-        {% for paragraph in paragraphs %}
-            <p>{{ paragraph }}</p>
-        {% endfor %}
+        {% if paragraphs %}
+            {% for paragraph in paragraphs %}
+                <p>{{ paragraph }}</p>
+            {% endfor %}
+        {% else %}
+            <p>No content available.</p>
+        {% endif %}
     </div>
 </body>
 </html>

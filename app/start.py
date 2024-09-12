@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for,jsonify
 from redis import Redis
 from rq import Queue
 from tasks import scrape_url
@@ -13,6 +13,19 @@ q = Queue('default', connection=redis_conn)
 def index():
     return render_template('index.html')
 
+#List all URLs queued by users.
+@app.route('/queued-urls', methods=['GET'])
+def list_queued_urls():
+    queued_jobs = q.jobs 
+    urls = []
+         
+    for job in queued_jobs:
+        if len(job.args) > 0:
+            urls.append(job.args[0])  
+            
+    return jsonify({'queued_urls': urls})
+
+
 @app.route('/scrape', methods=['POST'])
 def scrape():
     message=None
@@ -22,7 +35,6 @@ def scrape():
         return "URL is required", 400
     
     task = q.enqueue(scrape_url, url)
-    # redis_conn.incr('job_count')  # Increment task count in Redis
     q_len = len(q)
     print(f"Task added. Job ID: {task.get_id()}. Now, {q_len} jobs in the queue.", flush=True)
 

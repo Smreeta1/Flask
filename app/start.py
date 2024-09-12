@@ -9,6 +9,8 @@ app = Flask(__name__)
 redis_conn = Redis(host='redis', port=6379)
 q = Queue('default', connection=redis_conn)
 
+user_queued_urls_list_key = 'queued_urls'
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -18,6 +20,8 @@ def index():
 def list_queued_urls():
     queued_jobs = q.jobs 
     urls = []
+    urls = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
+    urls = [url.decode('utf-8') for url in urls]
          
     for job in queued_jobs:
         if len(job.args) > 0:
@@ -28,13 +32,15 @@ def list_queued_urls():
 
 @app.route('/scrape', methods=['POST'])
 def scrape():
-    message=None
-    
     url = request.form.get('url')
     if not url:
         return "URL is required", 400
     
     task = q.enqueue(scrape_url, url)
+    
+    # Store URL enqueued by users in Redis list
+    redis_conn.rpush(user_queued_urls_list_key, url)
+    
     q_len = len(q)
     print(f"Task added. Job ID: {task.get_id()}. Now, {q_len} jobs in the queue.", flush=True)
 

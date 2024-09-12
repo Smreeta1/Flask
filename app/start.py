@@ -22,7 +22,7 @@ def list_queued_urls():
     urls = []
     urls = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
     urls = [url.decode('utf-8') for url in urls]
-         
+    
     for job in queued_jobs:
         if len(job.args) > 0:
             urls.append(job.args[0])  

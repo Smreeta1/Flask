@@ -31,7 +31,7 @@ def index():
     )
 
 
-@app.route("/scrape", methods=["POST"])
+@app.route("/scrape", methods=["GET","POST"])
 def scrape():
 
     url = request.args.get("url")  # Query parameter

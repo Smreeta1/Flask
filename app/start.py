@@ -22,11 +22,6 @@ def before_request():
     print(f"Session User ID: {session.get('user_id')}")
 
 
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
-
-
 @app.route("/")
 def index():
     return jsonify(
@@ -36,9 +31,8 @@ def index():
     )
 
 
-@app.route("/scrape", methods=["GET", "POST"])
+@app.route("/scrape", methods=["POST"])
 def scrape():
-    # url = request.form.get('url') #form data for template html files
 
     url = request.args.get("url")  # Query parameter
     if not url:
@@ -66,7 +60,6 @@ def scrape():
         flush=True,
     )
 
-    # return redirect(url_for('get_result'))
 
     # JSON response after enqueuing the task
     return (
@@ -80,7 +73,6 @@ def scrape():
         ),
         202,
     )
-
 
 @app.route("/queued-urls", methods=["GET"])
 def queued_urls():

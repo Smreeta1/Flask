@@ -40,14 +40,6 @@ def scrape():
     
     # Store URL in Redis list 
     redis_conn.rpush(user_queued_urls_list_key, url)
-
-    # Store URL in session
-    if 'urls' not in session:
-        session['urls'] = []
-    if url not in session['urls']:
-        session['urls'].append(url)
-    
-    print(f"URLs added: {session.get('urls')}")
     
     q_len = len(q)
     print(f"Task added. Job ID: {task.get_id()}. Now, {q_len} jobs in the queue.", flush=True)

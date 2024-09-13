@@ -14,6 +14,8 @@ services:
       - worker
     volumes:
       - ./app:/app
+    env_file:
+      - ./app/.env
 
   redis:
     image: redis:latest
@@ -35,3 +37,5 @@ services:
       - REDIS_HOST=redis
     volumes:
       - ./app:/app
+    env_file:
+      - ./app/.env

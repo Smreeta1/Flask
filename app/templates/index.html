@@ -15,4 +15,20 @@
                     <input type="text" id="url" name="url">
                     <input type="submit" value="Scrape">
                 </form>
+                <h2>Queued URLs:</h2>
+                <ul id="queued-urls"></ul>
+                <script>
+                    fetch('/queued-urls')
+                        .then(response => response.json())
+                        .then(data => {
+                            const urls = data.queued_urls;
+                            const list = document.getElementById('queued-urls');
+                            urls.forEach(url => {
+                                const listItem = document.createElement('li');
+                                listItem.textContent = url;
+                                list.appendChild(listItem);
+                            });
+                        });
+                </script>
+            </body>
 </html>

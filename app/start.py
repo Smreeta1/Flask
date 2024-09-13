@@ -41,10 +41,13 @@ def scrape():
     # Store URL in Redis list 
     redis_conn.rpush(user_queued_urls_list_key, url)
     
+    # Store the job ID in the session
+    session['job_id'] = task.get_id()
+    
     q_len = len(q)
     print(f"Task added. Job ID: {task.get_id()}. Now, {q_len} jobs in the queue.", flush=True)
 
-    return redirect(url_for('get_result', job_id=task.get_id()))
+    return redirect(url_for('get_result'))
 
 
 @app.route('/queued-urls', methods=['GET'])
@@ -61,8 +64,12 @@ def queued_urls():
 
     return jsonify({'queued_urls': urls})
 
-@app.route('/result/<job_id>')
-def get_result(job_id):
+@app.route('/result')
+def get_result():
+    job_id = session.get('job_id')
+    if not job_id:
+        return "Job ID not found in session", 400
+    
     job = q.fetch_job(job_id)
     q_len = len(q)
     if job:

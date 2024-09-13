@@ -59,14 +59,7 @@ def queued_urls():
     urls = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
     urls = [url.decode('utf-8') for url in urls]
 
-    # Retrieve URLs from session
-    session_urls = session.get('urls', [])
-
-    print(f"Redis URLs: {urls}")
-    print(f"Session URLs: {session_urls}")
-
     return jsonify({'queued_urls': urls})
-
 
 @app.route('/result/<job_id>')
 def get_result(job_id):

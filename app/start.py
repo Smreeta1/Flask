@@ -60,7 +60,8 @@ def scrape():
         flush=True,
     )
 
-
+    result_url = url_for("get_result", job_id=task.get_id(), _external=True)
+    
     # JSON response after enqueuing the task
     return (
         jsonify(
@@ -68,7 +69,7 @@ def scrape():
                 "message": "Task successfully added to the queue.",
                 "job_id": task.get_id(),
                 "queue_length": q_len,
-                "result_url": url_for("get_result", _external=True),
+                "result_url": result_url,
             }
         ),
         202,
@@ -89,9 +90,9 @@ def queued_urls():
     return jsonify({"queued_urls": urls})
 
 
-@app.route("/result")
-def get_result():
-    job_id = session.get("job_id")
+@app.route("/result/<job_id>")
+def get_result(job_id):
+    
     if not job_id:
         return "Job ID not found in session", 400
 

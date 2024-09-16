@@ -1,10 +1,12 @@
-from flask import Flask, request, render_template, redirect, url_for, jsonify, session
+from flask import Flask, request,url_for, jsonify, session
 from redis import Redis
 from rq import Queue
 from tasks import scrape_url
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+from rq.job import Job
+import hashlib
 
 load_dotenv()
 
@@ -36,6 +38,10 @@ def index():
         }
     )
 
+# function to generate a unique custom ID based on the URL
+def generate_custom_id(url):
+    return hashlib.md5(url.encode('utf-8')).hexdigest()
+
 #Enqueue task(URLs)
 @app.route("/scrape", methods=["GET","POST"])
 def scrape():
@@ -50,25 +56,29 @@ def scrape():
     if not user_id:
         return "User not authenticated", 403
     
-
+    # Redis keys
     user_queued_urls_list_key = f"queued_urls_{user_id}"
     url_to_job_key = f"url_to_job_{user_id}"
 
-
-    # Check if the URL has already been queued by the user
-    if url.encode('utf-8') in redis_conn.lrange(user_queued_urls_list_key, 0, -1):
+    #check if url is already enqueued
+    if redis_conn.hexists(url_to_job_key, url):
         return jsonify({"error": "This URL has already been queued."}), 400
-    # task = q.enqueue(scrape_url, request.args.get("url"))
-    task = q.enqueue(scrape_url, url)
 
-    # Store URL in Redis list
-    redis_conn.rpush(user_queued_urls_list_key, url)
+    # Generate custom ID for the job
+    custom_id = generate_custom_id(url)
     
-    # Store the job ID associated with the URL
-    redis_conn.hset(url_to_job_key, url, task.get_id())
+    # Enqueue the task with a custom job ID
+    task = q.enqueue(scrape_url, url, meta={"custom_id": custom_id})
+    job_id = task.get_id()    # Unique job ID
+    
+
+    # Store job_id and URL mapping  in Redis list
+    redis_conn.rpush(user_queued_urls_list_key,job_id)
+    redis_conn.hset(url_to_job_key, url, job_id)
+
 
     # Store the job ID in the session
-    session["job_id"] = task.get_id()
+    session["job_id"] = job_id
 
     # Queue length
     q_len = len(q)
@@ -77,7 +87,7 @@ def scrape():
         flush=True,
     )
 
-    result_url = url_for("get_result", job_id=task.get_id(), _external=True)
+    result_url = url_for("get_result", job_id=job_id, _external=True)
     
     # JSON response after enqueuing the task
     return jsonify(
@@ -90,7 +100,7 @@ def scrape():
             }),202
  
     
-#View all Queued URLs by user
+#View all Queued URLs by user (through their job IDs)
 
 @app.route("/queued-urls", methods=["GET"])
 def queued_urls():
@@ -98,17 +108,24 @@ def queued_urls():
     if not user_id:
         return jsonify({"error": "User ID not found in session"}), 400
 
-    user_queued_urls_list_key = f"queued_urls_{user_id}"
+    user_queued_urls_list_key = f"queued_urls_{user_id}" # List of job IDs
+    url_to_job_key = f"url_to_job_{user_id}" # Hash mapping URLs to job IDs
+
     
+    job_ids = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
+    job_ids = [job_id.decode("utf-8") for job_id in job_ids]
+     
+    # Fetch corresponding URLs from the Redis hash
+    urls = []
+    for job_id in job_ids:
+        # Find the URL associated with the job ID
+        for url, stored_job_id in redis_conn.hgetall(url_to_job_key).items():
+            if stored_job_id.decode("utf-8") == job_id:
+                urls.append(url.decode("utf-8"))
+   
+    return jsonify({"queued_urls": urls, "user_session_id": user_id})
 
-    # Retrieve URLs from Redis
-    urls = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
-    urls = [url.decode("utf-8") for url in urls]
-
-    return jsonify({"queued_urls": urls,
-                    "for the user_session_id":user_id})
-
-# View Scraped Results
+# View Scraped Results using job ID
 
 @app.route("/result/")
 def get_result():
@@ -124,17 +141,13 @@ def get_result():
     if not user_id:
         return jsonify({"error": "User ID not found in session"}), 400
     
-    # Define the Redis keys for this user
-    user_queued_urls_list_key = f"queued_urls_{user_id}"
+    # Define the Redis keys for this user's URL to job ID mapping
     url_to_job_key = f"url_to_job_{user_id}"
     
     # Fetch job ID from the URL
     job_id = redis_conn.hget(url_to_job_key, url)
     if not job_id:
         return jsonify({"error": "Job for this URL not found"}), 404
-
-    print(f"Job ID fetched from Redis for {url}: {job_id}")
-    
     
     # If job ID is not found, return an error
     if not job_id:
@@ -142,7 +155,6 @@ def get_result():
                         {
                         "error": f"No job associated with the URL: {url}",
                         "user_session_id":user_id,
-                        "user_queued_urls_list_key":user_queued_urls_list_key,
                         "url_to_job_key ": f"url_to_job_{user_id}"
                         }
                     ),400
@@ -151,31 +163,25 @@ def get_result():
     job_id = job_id.decode('utf-8')
     
     # Fetch the job using the job ID from the Redis Queue
-    job = q.fetch_job(job_id)
-    
-    # Fetch the stored URLs for the current user from Redis
-    stored_urls = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
-    stored_urls = [url.decode('utf-8') for url in stored_urls]  # Decode URLs
-
-    # Print for debugging
-    print(f"Stored URLs in Redis for user {user_id}: {stored_urls}")
-    print(f'Current session user_id is:{user_id}')
+    job = q.fetch_job(job_id)   
 
     if job:
         if job.is_finished:
-            # Assuming the job result contains the scraped data (title and paragraphs)
+            
             paragraphs, title = job.result
+            custom_id = job.meta.get("custom_id")
             return jsonify(
                 {
                     "title": title, 
                     "paragraphs": paragraphs,
-                    "stored_urls": stored_urls  # Include the stored URLs in the response
+                     "custom_id": custom_id
+                     
                 }
             )
         elif job.is_failed:
             return jsonify({"error": "The job failed to complete."}), 500
         else:
-            return jsonify({"message": "Job is still processing.", "stored_urls": stored_urls}), 202
+            return jsonify({"message": "Job is still processing."}), 202
     else:
         return jsonify({"error": f"Job {job_id} not found"}), 404
 

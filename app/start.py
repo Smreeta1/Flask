@@ -57,10 +57,6 @@ def scrape():
     # Redis keys
     user_queued_urls_list_key = f"queued_urls_{user_id}"
 
-    #check if url is already enqueued
-    # if redis_conn.hexists(url_to_job_key, url):
-    #     return jsonify({"error": "This URL has already been queued."}), 400
-    
     queued_urls = redis_conn.lrange(user_queued_urls_list_key, 0, -1)
     if url.encode('utf-8') in queued_urls:
         return jsonify({"error": "This URL has already been queued."}), 400
@@ -74,8 +70,6 @@ def scrape():
     
     redis_conn.rpush(user_queued_urls_list_key,url)
     
-    
-
     # Queue length
     q_len = len(q)
     logger.info("Task added. Job ID: %s. Now, %d jobs in the queue.", task.get_id(), q_len) 
@@ -109,7 +103,6 @@ def queued_urls():
    
     return jsonify({"queued_urls": urls, "user_session_id": user_id})
 
-
 # View Scraped Results using job ID
 
 @app.route("/result/")
@@ -126,26 +119,8 @@ def get_result():
     if not user_id:
         return jsonify({"error": "User ID not found in session"}), 400
     
-    # Define the Redis keys for this user's URL to job ID mapping
-    url_to_job_key = f"url_to_job_{user_id}"
-    
     job_id=url
-    
-    # Storing
-    redis_conn.set(f"{url_to_job_key}:{url}", job_id)
-    logger.info("Stored job ID for URL %s: %s", url, job_id)
-    
-    #Fetching
-    job_id = redis_conn.get(f"{url_to_job_key}:{url}")
-    logger.info("Fetched job ID for URL %s: %s", url, job_id)
-    
-    # job_id = redis_conn.get(url)
-    if not job_id:
-        return jsonify({"error": "Job for this URL not found"}), 404 
-    
-    # Decode the job ID
-    job_id = job_id.decode('utf-8')
-    
+     
     # Fetch the job using the job ID from the Redis Queue
     job = q.fetch_job(job_id)   
 
@@ -159,7 +134,8 @@ def get_result():
                 {
                     "title": title, 
                     "paragraphs": paragraphs,
-                     "custom_id": custom_id
+                     "custom_id": custom_id,
+                     "url_to_job_key" :user_id
                      
                 }
             )
